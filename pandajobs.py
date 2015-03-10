@@ -27,7 +27,7 @@ def read_panda_jobs(input_data=None):
         # Get json output from http://bigpanda.cern.ch
         buffer = StringIO()
         c = pycurl.Curl()
-        c.setopt(c.URL, "http://bigpanda.cern.ch/jobs/?jobtype=analysis&hours=1&fields=pandaid,modificationhost,jobstatus&computingelement=" + queue)
+        c.setopt(c.URL, "http://bigpanda.cern.ch/jobs/?hours=1&fields=pandaid,modificationhost,jobstatus&computingelement=" + queue)
         c.setopt(c.WRITEFUNCTION, buffer.write)
         c.setopt(c.HTTPHEADER, ["Accept: application/json"])
         c.setopt(c.HTTPHEADER, ["Content-Type: application/json"])
@@ -42,24 +42,22 @@ def read_panda_jobs(input_data=None):
 
             # Get host site
             try:
-                 job_hostsite = p[p.index('"modificationhost":')+1]
-            except ValueError:
-                job_hostsite = "undefined"
-
-            if "uct2" in job_hostsite:
-                job_hostsite = "uct2"
-            elif "iu.edu" in job_hostsite:
-                job_hostsite = "iut2"
-            elif ("golub" in job_hostsite) | ("taub" in job_hostsite):
-                job_hostsite = "uiuc"
-            else:
-                job_hostsite = job_hostsite[1:-1].split("@")[1].split(".")[-2]
-
-            if (job_hostsite not in metrics) & ("undefined" not in job_hostsite):
-                metrics[job_hostsite] = {'pending':0, 'defined':0, 'waiting':0, \
+                job_hostsite = p[p.index('"modificationhost":')+1]
+                if "uct2" in job_hostsite:
+                    job_hostsite = "uct2"
+                elif "iu.edu" in job_hostsite:
+                    job_hostsite = "iut2"
+                elif ("golub" in job_hostsite) | ("taub" in job_hostsite):
+                    job_hostsite = "uiuc"
+                else:
+                    job_hostsite = job_hostsite[1:-1].split("@")[1].split(".")[-2]
+                if (job_hostsite not in metrics):
+                    metrics[job_hostsite] = {'pending':0, 'defined':0, 'waiting':0, \
                        'assigned':0, 'throttled':0, 'activated':0, 'sent':0, 'starting':0, \
                        'running':0, 'holding':0, 'merging':0, 'transferring':0, 'finished':0, \
                        'failing':0, 'failed':0, 'cancelled':0, }
+            except ValueError:
+                job_hostsite = "undefined"
 
 
             # Increment appropriate job status
