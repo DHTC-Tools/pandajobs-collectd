@@ -42,15 +42,20 @@ def read_panda_jobs(input_data=None):
 
             # Get host site
             try:
-                job_hostsite = p[p.index('"modificationhost":')+1]
+                job_hostsite = p[p.index('"modificationhost":')+1][1:-1].split("@")[-1]
                 if "uct2" in job_hostsite:
                     job_hostsite = "uct2"
                 elif "iu.edu" in job_hostsite:
                     job_hostsite = "iut2"
                 elif ("golub" in job_hostsite) | ("taub" in job_hostsite):
                     job_hostsite = "uiuc"
+                elif ("airoldi" in job_hostsite):
+                    job_hostsite = "harvard"
                 else:
-                    job_hostsite = job_hostsite[1:-1].split("@")[1].split(".")[-2]
+                    try:
+                        job_hostsite = job_hostsite.split(".")[-2]
+                    except IndexError:
+                        job_hostsite = job_hostsite # no reassignment
                 if (job_hostsite not in metrics):
                     metrics[job_hostsite] = {'pending':0, 'defined':0, 'waiting':0, \
                        'assigned':0, 'throttled':0, 'activated':0, 'sent':0, 'starting':0, \
