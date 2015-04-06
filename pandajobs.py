@@ -27,7 +27,7 @@ def read_panda_jobs(input_data=None):
         # Get json output from http://bigpanda.cern.ch
         buffer = StringIO()
         c = pycurl.Curl()
-        c.setopt(c.URL, "http://bigpanda.cern.ch/jobs/?hours=1&fields=pandaid,modificationhost,jobstatus&computingelement=" + queue)
+        c.setopt(c.URL, "http://bigpanda.cern.ch/jobs/?hours=1&limit=100000&fields=pandaid,modificationhost,jobstatus&computingelement=" + queue)
         c.setopt(c.WRITEFUNCTION, buffer.write)
         c.setopt(c.HTTPHEADER, ["Accept: application/json"])
         c.setopt(c.HTTPHEADER, ["Content-Type: application/json"])
@@ -40,29 +40,43 @@ def read_panda_jobs(input_data=None):
         for job in alljobs:
             p = job.split()
 
+            # queue is empty
+            if (len(p)==1):
+                continue
+
             # Get host site
             try:
                 job_hostsite = p[p.index('"modificationhost":')+1][1:-1].split("@")[-1]
                 if "uct2" in job_hostsite:
                     job_hostsite = "uct2"
-                elif "iu.edu" in job_hostsite:
+                elif "iut2" in job_hostsite:
                     job_hostsite = "iut2"
                 elif ("golub" in job_hostsite) | ("taub" in job_hostsite):
                     job_hostsite = "uiuc"
-                elif ("airoldi" in job_hostsite):
-                    job_hostsite = "harvard"
+                elif "karst" in job_hostsite:
+                    job_hostsite = "karst"
+                elif "fresnostate" in job_hostsite:
+                    job_hostsite = "fresnostate"
+                elif ("harvard" in job_hostsite) | ("airoldi" in job_hostsite):
+                    job_hostsite = "odyssey"
+                elif "midway" in job_hostsite:
+                    job_hostsite = "midway"
+                elif "stampede" in job_hostsite:
+                    job_hostsite = "stampede"
+                elif "rodeo" in job_hostsite:
+                    job_hostsite = "utexas"
                 else:
-                    try:
-                        job_hostsite = job_hostsite.split(".")[-2]
-                    except IndexError:
-                        job_hostsite = job_hostsite # no reassignment
-                if (job_hostsite not in metrics):
-                    metrics[job_hostsite] = {'pending':0, 'defined':0, 'waiting':0, \
-                       'assigned':0, 'throttled':0, 'activated':0, 'sent':0, 'starting':0, \
-                       'running':0, 'holding':0, 'merging':0, 'transferring':0, 'finished':0, \
-                       'failing':0, 'failed':0, 'cancelled':0, }
+                    collectd.info("pandajob module: job_hostsite is \'" + job_hostsite + "\'")
+                    job_hostsite = "undefined"
             except ValueError:
+                collectd.info("pandajob module: current job is \'" + job + "\' (hostsite)")
                 job_hostsite = "undefined"
+
+            if (job_hostsite not in metrics):
+                metrics[job_hostsite] = {'pending':0, 'defined':0, 'waiting':0, \
+                   'assigned':0, 'throttled':0, 'activated':0, 'sent':0, 'starting':0, \
+                   'running':0, 'holding':0, 'merging':0, 'transferring':0, 'finished':0, \
+                   'failing':0, 'failed':0, 'cancelled':0, }
 
 
             # Increment appropriate job status
@@ -70,6 +84,7 @@ def read_panda_jobs(input_data=None):
                 job_status = p[p.index('"jobstatus":')+1][1:-2].lower() 
                 metrics[job_hostsite][job_status] += 1
             except ValueError:
+                collectd.info("pandajob module: current job is \'" + job + "\' (status)")
                 job_status = "undefined"
 
         # Send the data back to collectd
